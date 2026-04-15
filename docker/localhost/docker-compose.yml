@@ -1,0 +1,91 @@
+name: formio
+
+services:
+
+  api:
+    container_name: formio-api
+    image: formio/formio-enterprise:${API_SERVER_VERSION:-latest}
+    platform: linux/amd64
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/status', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1));"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    ports:
+      - "5000"
+    environment:
+      PDF_SERVER: http://formio-pdf:5000 # DO NOT CHANGE
+      PORT: 5000                         # DO NOT CHANGE
+      LICENSE_KEY: ${LICENSE_KEY}
+      LICENSE_REMOTE: ${LICENSE_REMOTE}
+      MONGO: "mongodb://${MONGO_USER}:${MONGO_PASSWORD}@formio-db:27017/${MONGO_DATABASE}?tls=${MONGO_TLS}&retryWrites=false&authSource=admin"
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASS: ${ADMIN_PASS}
+      ADMIN_KEY: ${ADMIN_KEY}
+      JWT_SECRET: ${JWT_SECRET}
+      DB_SECRET: ${DB_SECRET}
+      PORTAL_SECRET: ${PORTAL_SECRET}
+      PORTAL_ENABLED: "${PORTAL_ENABLED}"
+      KEEP_ALIVE_TIMEOUT: ${KEEP_ALIVE_TIMEOUT}
+      FORMIO_VM_TIMEOUT: ${FORMIO_VM_TIMEOUT}
+      DEBUG: ${API_DEBUG}
+
+  pdf:
+    container_name: formio-pdf
+    image: formio/pdf-server:${PDF_SERVER_VERSION:-latest}
+    platform: linux/amd64
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+      s3:
+        condition: service_healthy
+    ports:
+      - "5000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/status', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1));"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    environment:
+      FORMIO_S3_SERVER: formio-s3 # DO NOT CHANGE
+      FORMIO_S3_PORT: 9000 # DO NOT CHANGE
+      FORMIO_PDF_PORT: 5000 # DO NOT CHANGE
+      LICENSE_KEY: ${LICENSE_KEY}
+      LICENSE_REMOTE: ${LICENSE_REMOTE}
+      MONGO: "mongodb://${MONGO_USER}:${MONGO_PASSWORD}@formio-db:27017/${MONGO_DATABASE}?tls=${MONGO_TLS}&retryWrites=false&authSource=admin"
+      DB_SECRET: ${DB_SECRET}
+      FORMIO_PDF_ADMINKEY: ${FORMIO_PDF_ADMINKEY}
+      FORMIO_S3_BUCKET: ${FORMIO_S3_BUCKET}
+      FORMIO_S3_REGION: ${FORMIO_S3_REGION}
+      FORMIO_S3_PREFIX: ${FORMIO_S3_PREFIX}
+      FORMIO_S3_KEY: ${FORMIO_S3_KEY}
+      FORMIO_S3_SECRET: ${FORMIO_S3_SECRET}
+      DEBUG: ${PDF_DEBUG}
+
+  mongo:
+    container_name: formio-db
+    image: mongo:${MONGO_VERSION:-latest}
+    restart: unless-stopped
+    ports:
+      - "27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')", "--quiet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
+
+volumes:
+   mongo-data:

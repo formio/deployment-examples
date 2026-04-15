@@ -1,0 +1,15 @@
+services:
+
+  nginx:
+    container_name: formio-proxy
+    image: nginx:latest
+    restart: unless-stopped
+    # command: ["/bin/sh", "-c", "trap exit TERM INT; mkfifo /tmp/pause ; </tmp/pause"]
+    ports:
+      - "${EXTERNAL_FORMIO_PORT}:80"
+    volumes:
+      - ./volumes/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /var/log/nginx/healthd:/var/log/nginx/healthd
+    depends_on:
+      - api
+      - pdf

@@ -1,0 +1,26 @@
+services:
+
+  s3:
+    container_name: formio-s3
+    image: rustfs/rustfs
+    restart: unless-stopped
+    ports:
+    - "${EXTERNAL_S3_CONSOLE_PORT}:9001"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://s3:9000/health" ]
+      interval: 2s
+      timeout: 10s
+      retries: 5
+    environment:
+      RUSTFS_ACCESS_KEY: ${FORMIO_S3_KEY}
+      RUSTFS_SECRET_KEY: ${FORMIO_S3_SECRET}
+      RUSTFS_CONSOLE_ADDRESS: 0.0.0.0:9001
+      RUSTFS_CORS_ALLOWED_ORIGINS: "*"
+      RUSTFS_CONSOLE_CORS_ALLOWED_ORIGINS: "*"
+    security_opt:
+      - "no-new-privileges:true"
+    volumes:
+      - rustfs-data:/data
+
+volumes:
+  rustfs-data:

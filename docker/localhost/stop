@@ -1,0 +1,4 @@
+#!/bin/bash
+PROXY=caddy
+S3=rustfs
+docker compose -f docker-compose.yml -f docker-compose.$S3.yml -f docker-compose.$PROXY.yml down

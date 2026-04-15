@@ -1,0 +1,23 @@
+services:
+
+  s3:
+    container_name: formio-s3
+    image: chrislusf/seaweedfs
+    command: ["mini", "-s3.port", "9000", "-filer.port", "9001"]
+    restart: unless-stopped
+    ports:
+    - "${EXTERNAL_S3_CONSOLE_PORT}:9001"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://0.0.0.0:9001/"]
+      interval: 2s
+      timeout: 10s
+      retries: 5
+      # start_period: 30s
+    environment:
+      AWS_ACCESS_KEY_ID: ${FORMIO_S3_KEY}
+      AWS_SECRET_ACCESS_KEY: ${FORMIO_S3_SECRET}
+    volumes:
+      - seaweedfs-data:/data
+
+volumes:
+  seaweedfs-data:

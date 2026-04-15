@@ -1,0 +1,22 @@
+services:
+
+  s3:
+    container_name: formio-s3
+    image: cgr.dev/chainguard/minio
+    command: server --console-address :9001 /data
+    restart: unless-stopped
+    ports:
+    - "${EXTERNAL_S3_CONSOLE_PORT}:9001"
+    healthcheck:
+      test: [ "CMD", "mc", "ready", "local" ]
+      interval: 2s
+      timeout: 10s
+      retries: 5
+    environment:
+      MINIO_ROOT_USER: ${FORMIO_S3_KEY}
+      MINIO_ROOT_PASSWORD: ${FORMIO_S3_SECRET}
+    volumes:
+      - minio-data:/data
+
+volumes:
+  minio-data:
