@@ -1,0 +1,7 @@
+#!/bin/bash
+VOLUME=volumes/api/secrets
+
+mkdir -p "${VOLUME}"
+
+openssl genpkey -algorithm RSA -out "${VOLUME}/esignature.pem" -pkeyopt rsa_keygen_bits:2048
+openssl rsa -in "${VOLUME}/esignature.pem" -pubout -out "${VOLUME}/esignature.public.pem"

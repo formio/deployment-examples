@@ -1,0 +1,9 @@
+#!/bin/bash
+PROXY=caddy
+S3=rustfs
+
+# Ensure that the esignature file is accessible by the api server.
+#   formio:esign:error Check Signatures error: Error: EACCES: permission denied, open '/secrets/esignature.pem'
+chmod a+r volumes/api/secrets/*
+
+docker compose -f docker-compose.yml -f docker-compose.$S3.yml -f docker-compose.$PROXY.yml up "$@"

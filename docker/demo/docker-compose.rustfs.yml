@@ -5,6 +5,7 @@ services:
     image: rustfs/rustfs
     restart: unless-stopped
     ports:
+    - "${EXTERNAL_S3_PORT}:9000"
     - "${EXTERNAL_S3_CONSOLE_PORT}:9001"
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://s3:9000/health" ]

@@ -4,7 +4,7 @@ services:
 
   api:
     container_name: formio-api
-    image: formio/formio-enterprise:${API_SERVER_VERSION:-latest}
+    image: formio/formio-enterprise:${API_SERVER_VERSION:-9.7.4}
     platform: linux/amd64
     restart: unless-stopped
     depends_on:
@@ -19,25 +19,29 @@ services:
     ports:
       - "5000"
     environment:
-      PDF_SERVER: http://formio-pdf:5000 # DO NOT CHANGE
-      PORT: 5000                         # DO NOT CHANGE
-      LICENSE_KEY: ${LICENSE_KEY}
+      PDF_SERVER: http://formio-pdf:5000
+      PORT: 5000
+      PORTAL_ENABLED: "${PORTAL_ENABLED}"
+      LICENSE_KEY: ${LICENSE_KEY:?Contact sales for a valid license key.}
       LICENSE_REMOTE: ${LICENSE_REMOTE}
-      MONGO: "mongodb://${MONGO_USER}:${MONGO_PASSWORD}@formio-db:27017/${MONGO_DATABASE}?tls=${MONGO_TLS}&retryWrites=false&authSource=admin"
+      MONGO: "mongodb://${MONGO_USER}:${MONGO_PASSWORD}@formio-db:27017/${MONGO_DATABASE}?tls=false&retryWrites=false&authSource=admin"
       ADMIN_EMAIL: ${ADMIN_EMAIL}
       ADMIN_PASS: ${ADMIN_PASS}
       ADMIN_KEY: ${ADMIN_KEY}
       JWT_SECRET: ${JWT_SECRET}
       DB_SECRET: ${DB_SECRET}
       PORTAL_SECRET: ${PORTAL_SECRET}
-      PORTAL_ENABLED: "${PORTAL_ENABLED}"
       KEEP_ALIVE_TIMEOUT: ${KEEP_ALIVE_TIMEOUT}
       FORMIO_VM_TIMEOUT: ${FORMIO_VM_TIMEOUT}
       DEBUG: ${API_DEBUG}
+      FORMIO_FEATURE_ESIGNATURE: "true"
+      ESIGN_PRIVATE_KEY_FILE: /secrets/esignature.pem
+    volumes:
+    - ./volumes/api/secrets:/secrets:ro
 
   pdf:
     container_name: formio-pdf
-    image: formio/pdf-server:${PDF_SERVER_VERSION:-latest}
+    image: formio/pdf-server:${PDF_SERVER_VERSION:-5.13.1}
     platform: linux/amd64
     restart: unless-stopped
     depends_on:
@@ -54,24 +58,24 @@ services:
       retries: 5
       start_period: 30s
     environment:
-      FORMIO_S3_SERVER: formio-s3 # DO NOT CHANGE
-      FORMIO_S3_PORT: 9000 # DO NOT CHANGE
-      FORMIO_PDF_PORT: 5000 # DO NOT CHANGE
-      LICENSE_KEY: ${LICENSE_KEY}
+      FORMIO_S3_SERVER: formio-s3
+      FORMIO_S3_PORT: 9000
+      FORMIO_PDF_PORT: 5000
+      LICENSE_KEY: ${LICENSE_KEY:?Contact sales for a valid license key.}
       LICENSE_REMOTE: ${LICENSE_REMOTE}
-      MONGO: "mongodb://${MONGO_USER}:${MONGO_PASSWORD}@formio-db:27017/${MONGO_DATABASE}?tls=${MONGO_TLS}&retryWrites=false&authSource=admin"
+      MONGO: "mongodb://${MONGO_USER}:${MONGO_PASSWORD}@formio-db:27017/${MONGO_DATABASE}?tls=false&retryWrites=false&authSource=admin"
       DB_SECRET: ${DB_SECRET}
-      FORMIO_PDF_ADMINKEY: ${FORMIO_PDF_ADMINKEY}
       FORMIO_S3_BUCKET: ${FORMIO_S3_BUCKET}
       FORMIO_S3_REGION: ${FORMIO_S3_REGION}
       FORMIO_S3_PREFIX: ${FORMIO_S3_PREFIX}
       FORMIO_S3_KEY: ${FORMIO_S3_KEY}
       FORMIO_S3_SECRET: ${FORMIO_S3_SECRET}
+      # FORMIO_PDF_ADMINKEY: ${FORMIO_PDF_ADMINKEY}
       DEBUG: ${PDF_DEBUG}
 
   mongo:
     container_name: formio-db
-    image: mongo:${MONGO_VERSION:-latest}
+    image: mongo:${MONGO_VERSION:-8.2}
     restart: unless-stopped
     ports:
       - "27017"
@@ -87,5 +91,29 @@ services:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD}
 
+  ready-message:
+    container_name: "ready-message"
+    image: alpine:latest
+    depends_on:
+      api:
+        condition: service_healthy
+      pdf:
+        condition: service_healthy
+    command: >
+      sh -c '
+        echo "=================================================="
+        echo "🚀 Form.io is now fully up and running!"
+        echo ""
+        echo "Connect to the app at: http://localhost:3000"
+        echo "Admin credentials: email=${ADMIN_EMAIL} / passord=${ADMIN_PASS}"
+        echo ""
+        echo "Useful commands:"
+        echo "  docker compose logs -f formio-api"
+        echo "  docker compose logs -f formio-pdf"
+        echo "=================================================="
+        exit 0
+      '
+    restart: no
+
 volumes:
-   mongo-data:
+  mongo-data:
