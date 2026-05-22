@@ -45,10 +45,27 @@ docker compose down       # stop containers, preserve data volumes
 docker compose down -v    # stop containers AND delete all data
 ```
 
-## Architecture
+## Environment Variables
 
-<details>
-<summary>Click to expand</summary>
+The source of truth is [docker/quickstart/.env.example](docker/quickstart/.env.example). The most important variables:
+
+| Variable | Default | Required | Description |
+|---|---|---|---|
+| `LICENSE_KEY` | *(empty)* | **Yes** | Form.io Enterprise license. Containers fail fast if unset. |
+| `DB_SECRET` | `123secret123` | Yes | Encrypts sensitive fields in MongoDB. **Do not change after data is written.** |
+| `JWT_SECRET` | `123secret123` | Yes | Signs JWTs. Changing this invalidates all active sessions. |
+| `ADMIN_EMAIL` | `admin@example.com` | Yes | Root admin account email, created on first boot. |
+| `ADMIN_PASS` | `CHANGEME` | Yes | Root admin account password. |
+| `ADMIN_KEY` | `thisIsMyXAdminKey` | Yes | Static API key for admin-level programmatic access. |
+| `MONGO_DATABASE` | `quickstart` | Yes | MongoDB database name. |
+| `MONGO_USER` / `MONGO_PASSWORD` | `admin` / `admin` | Yes | MongoDB root credentials. |
+| `FORMIO_S3_BUCKET` | `files` | Yes | Bucket name for uploads. |
+| `FORMIO_S3_REGION` | `us-east-1` | Yes | Region label (local S3 stores usually ignore this). |
+| `FORMIO_S3_KEY` / `FORMIO_S3_SECRET` | `admin@example.com` / `CHANGEME` | Yes | S3 access credentials, shared between SeaweedFS and the PDF server. |
+
+Image tags use fallback syntax in the compose file (`${API_SERVER_VERSION:-9.7.4}`), so you can override them in `.env` without editing `docker-compose.yml`.
+
+## Architecture
 
 Incoming traffic hits Caddy on the host port (default `3000`). Caddy routes `/pdf/*` to the PDF server and everything else to the API server.
 
@@ -85,51 +102,6 @@ Incoming traffic hits Caddy on the host port (default `3000`). Caddy routes `/pd
 | `ready-message` | `alpine:latest` | One-shot container that prints a success banner once the API and PDF healthchecks pass |
 
 Services use healthcheck-based dependency ordering. Mongo starts first. The API waits for a healthy Mongo. The PDF server waits for both the API and SeaweedFS. The ready-message container waits for the API and PDF to be healthy.
-
-</details>
-
-## Environment Variables
-
-The source of truth is [docker/quickstart/.env.example](docker/quickstart/.env.example). The most important variables:
-
-| Variable | Default | Required | Description |
-|---|---|---|---|
-| `LICENSE_KEY` | *(empty)* | **Yes** | Form.io Enterprise license. Containers fail fast if unset. |
-| `DB_SECRET` | `123secret123` | Yes | Encrypts sensitive fields in MongoDB. **Do not change after data is written.** |
-| `JWT_SECRET` | `123secret123` | Yes | Signs JWTs. Changing this invalidates all active sessions. |
-| `ADMIN_EMAIL` | `admin@example.com` | Yes | Root admin account email, created on first boot. |
-| `ADMIN_PASS` | `CHANGEME` | Yes | Root admin account password. |
-| `ADMIN_KEY` | `thisIsMyXAdminKey` | Yes | Static API key for admin-level programmatic access. |
-| `MONGO_DATABASE` | `quickstart` | Yes | MongoDB database name. |
-| `MONGO_USER` / `MONGO_PASSWORD` | `admin` / `admin` | Yes | MongoDB root credentials. |
-| `FORMIO_S3_BUCKET` | `files` | Yes | Bucket name for uploads. |
-| `FORMIO_S3_REGION` | `us-east-1` | Yes | Region label (local S3 stores usually ignore this). |
-| `FORMIO_S3_KEY` / `FORMIO_S3_SECRET` | `admin@example.com` / `CHANGEME` | Yes | S3 access credentials, shared between SeaweedFS and the PDF server. |
-
-Image tags use fallback syntax in the compose file (`${API_SERVER_VERSION:-9.7.4}`), so you can override them in `.env` without editing `docker-compose.yml`.
-
-## Operating the Stack
-
-Tail logs from a specific service:
-
-```bash
-docker compose logs -f formio-api
-docker compose logs -f formio-pdf
-docker compose logs -f formio-db
-```
-
-Restart a single service after changing `.env`:
-
-```bash
-docker compose up -d --force-recreate api
-```
-
-Shell into a container:
-
-```bash
-docker exec -it formio-api sh
-docker exec -it formio-db mongosh -u admin -p admin --authenticationDatabase admin
-```
 
 ## Troubleshooting
 
