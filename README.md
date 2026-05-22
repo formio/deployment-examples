@@ -159,7 +159,7 @@ This stack is designed for local evaluation. Before running Form.io in any real 
 
 ## Support
 
-> A more configurable example with swappable reverse proxy and S3 backends is maintained separately at <!-- TODO: insert repo URL -->.
+> A more configurable example with swappable reverse proxy and S3 backends is also in this repo but will be moved to it's own repo at a future date.
 
 | Channel | When to use |
 |---|---|
